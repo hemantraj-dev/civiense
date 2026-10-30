@@ -12,3 +12,6 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from app.main import app
+
+# Export both app and handler for universal serverless compatibility
+handler = app

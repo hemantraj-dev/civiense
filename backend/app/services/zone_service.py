@@ -420,14 +420,10 @@ class ZoneService:
 
         logger.info(f"Seeding {len(PILOT_ZONES_DATA)} pilot zones for Punjab Tri-City...")
         
-        # Batch query live elevation API if available
-        coords_for_api = [{"latitude": z["lat"], "longitude": z["lon"]} for z in PILOT_ZONES_DATA]
-        elevations = terrain_service.get_elevation_batch(coords_for_api)
-
-        for i, z in enumerate(PILOT_ZONES_DATA):
+        for z in PILOT_ZONES_DATA:
             existing = db.query(Zone).filter(Zone.zone_code == z["zone_code"]).first()
-            elev = elevations[i] if i < len(elevations) else z["elevation_m"]
-            rel_diff = round(elev - 310.0, 1)
+            elev = z.get("elevation_m", 310.0)
+            rel_diff = z.get("rel_diff_m", round(elev - 310.0, 1))
 
             if not existing:
                 zone = Zone(

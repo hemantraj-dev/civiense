@@ -56,27 +56,35 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS setup
+# CORS setup: allow all origins for API prototype access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In development prototype, allow frontend origin
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Register API Routers
-app.include_router(health_router, prefix=settings.API_PREFIX)
-app.include_router(weather_router, prefix=settings.API_PREFIX)
-app.include_router(drainage_router, prefix=settings.API_PREFIX)
-app.include_router(terrain_router, prefix=settings.API_PREFIX)
-app.include_router(zones_router, prefix=settings.API_PREFIX)
-app.include_router(risk_router, prefix=settings.API_PREFIX)
-app.include_router(reports_router, prefix=settings.API_PREFIX)
-app.include_router(actions_router, prefix=settings.API_PREFIX)
-app.include_router(scenarios_router, prefix=settings.API_PREFIX)
-app.include_router(data_sources_router, prefix=settings.API_PREFIX)
-app.include_router(analytics_router, prefix=settings.API_PREFIX)
+# Register API Routers both with /api prefix and root for maximum proxy compatibility
+api_routers = [
+    health_router,
+    weather_router,
+    drainage_router,
+    terrain_router,
+    zones_router,
+    risk_router,
+    reports_router,
+    actions_router,
+    scenarios_router,
+    data_sources_router,
+    analytics_router,
+]
+
+for r in api_routers:
+    app.include_router(r, prefix=settings.API_PREFIX)
+
+for r in api_routers:
+    app.include_router(r)
 
 @app.get("/")
 def root():
