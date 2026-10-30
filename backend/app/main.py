@@ -65,6 +65,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 # Register API Routers both with /api prefix and root for maximum proxy compatibility
 api_routers = [
     health_router,
@@ -86,13 +90,33 @@ for r in api_routers:
 for r in api_routers:
     app.include_router(r)
 
-@app.get("/")
-def root():
-    return {
-        "system": settings.APP_NAME,
-        "tagline": settings.TAGLINE,
-        "pilot": settings.PILOT_REGION,
-        "documentation": "/docs",
-        "health": "/api/health"
-    }
+# Check if built frontend SPA exists to serve unified single-domain app
+frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if not frontend_dist.exists():
+    frontend_dist = Path("frontend/dist")
+
+if frontend_dist.exists() and (frontend_dist / "index.html").exists():
+    logger.info(f"Serving unified frontend SPA from {frontend_dist}")
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        file_path = frontend_dist / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
+else:
+    @app.get("/")
+    def root():
+        return {
+            "system": settings.APP_NAME,
+            "tagline": settings.TAGLINE,
+            "pilot": settings.PILOT_REGION,
+            "documentation": "/docs",
+            "health": "/api/health"
+        }
 
