@@ -1,6 +1,18 @@
 import os
 from pydantic import BaseModel
 
+def get_default_db_url() -> str:
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        # Normalize postgres:// to postgresql:// for SQLAlchemy
+        if env_url.startswith("postgres://"):
+            return env_url.replace("postgres://", "postgresql://", 1)
+        return env_url
+    # On Vercel or AWS Lambda, the local filesystem is read-only except /tmp
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        return "sqlite:////tmp/civisense.db"
+    return "sqlite:///./civisense.db"
+
 class Settings(BaseModel):
     APP_NAME: str = "CIVISENSE"
     APP_VERSION: str = "2.0.0"
@@ -14,7 +26,7 @@ class Settings(BaseModel):
     TIMEZONE: str = "Asia/Kolkata"
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./civisense.db")
+    DATABASE_URL: str = get_default_db_url()
     
     # External APIs
     OPEN_METEO_FORECAST_URL: str = "https://api.open-meteo.com/v1/forecast"

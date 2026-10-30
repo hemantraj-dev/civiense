@@ -25,23 +25,28 @@ from app.api.routes_analytics import router as analytics_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("civisense")
 
+def init_db():
+    try:
+        logger.info("Ensuring CiviSense database and models are initialized...")
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            zone_service.seed_zones_if_empty(db)
+            report_service.seed_demo_reports_if_empty(db)
+            action_service.seed_demo_actions_if_empty(db)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Database initialization notice: {e}")
+
+# Call init_db on module load to guarantee ready state in serverless runtime
+init_db()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create tables and seed initial data
-    logger.info("Initializing CiviSense database and models...")
-    Base.metadata.create_all(bind=engine)
-    
-    db = SessionLocal()
-    try:
-        zone_service.seed_zones_if_empty(db)
-        report_service.seed_demo_reports_if_empty(db)
-        action_service.seed_demo_actions_if_empty(db)
-    finally:
-        db.close()
-    
+    init_db()
     logger.info(f"CiviSense v{settings.APP_VERSION} ready for operation.")
     yield
-    # Shutdown
     logger.info("CiviSense shutting down...")
 
 app = FastAPI(
