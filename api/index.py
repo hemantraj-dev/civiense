@@ -2,16 +2,18 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure backend directory is in sys.path for module resolution
+# Ensure both root and backend directory are in sys.path for universal resolution
 root_dir = Path(__file__).resolve().parent.parent
 backend_dir = root_dir / "backend"
 
-if str(backend_dir) not in sys.path:
-    sys.path.insert(0, str(backend_dir))
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+for p in [str(backend_dir), str(root_dir)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from app.main import app
+try:
+    from app.main import app
+except ImportError:
+    from backend.app.main import app
 
 # Export both app and handler for universal serverless compatibility
 handler = app
